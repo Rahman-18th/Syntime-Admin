@@ -6,16 +6,21 @@ import {
 } from 'react-router-dom';
 
 import LoginPage from '../features/auth/pages/LoginPage';
+import AdminLayout from '../layouts/AdminLayout';
+import DashboardPage from '../pages/DashboardPage';
+import ProtectedRoute from './ProtectedRoute';
 
-function DashboardPlaceholder() {
+function PlaceholderPage({
+  title,
+}: {
+  title: string;
+}) {
   return (
-    <div
-      style={{
-        padding: '32px',
-      }}
-    >
-      <h1>SynTime Dashboard</h1>
-      <p>Admin login successful.</p>
+    <div>
+      <h1>{title}</h1>
+      <p>
+        This module will be implemented next.
+      </p>
     </div>
   );
 }
@@ -28,7 +33,7 @@ export default function AppRouter() {
           path="/"
           element={
             <Navigate
-              to="/login"
+              to="/dashboard"
               replace
             />
           }
@@ -40,9 +45,67 @@ export default function AppRouter() {
         />
 
         <Route
-          path="/dashboard"
+          element={<ProtectedRoute />}
+        >
+          <Route
+            element={<AdminLayout />}
+          >
+            <Route
+              path="/dashboard"
+              element={<DashboardPage />}
+            />
+
+            <Route
+              path="/employees"
+              element={
+                <PlaceholderPage title="Employees" />
+              }
+            />
+
+            <Route
+              path="/attendance"
+              element={
+                <PlaceholderPage title="Attendance" />
+              }
+            />
+
+            <Route
+              path="/requests"
+              element={
+                <PlaceholderPage title="Requests" />
+              }
+            />
+
+            <Route
+              path="/payslips"
+              element={
+                <PlaceholderPage title="Payslips" />
+              }
+            />
+
+            <Route
+              path="/announcements"
+              element={
+                <PlaceholderPage title="Announcements" />
+              }
+            />
+
+            <Route
+              path="/notifications"
+              element={
+                <PlaceholderPage title="Notifications" />
+              }
+            />
+          </Route>
+        </Route>
+
+        <Route
+          path="*"
           element={
-            <DashboardPlaceholder />
+            <Navigate
+              to="/dashboard"
+              replace
+            />
           }
         />
       </Routes>

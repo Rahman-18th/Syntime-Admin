@@ -11,6 +11,7 @@ import DashboardPage from '../pages/DashboardPage';
 import ProtectedRoute from './ProtectedRoute';
 import AnnouncementPage from '../features/announcemets/pages/AnnouncementPage';
 import EmployeePage from '../features/employees/pages/EmployeePage';
+import AttendancePage from '../features/attendance/pages/AttendancePage';
 
 function PlaceholderPage({
   title,
@@ -64,9 +65,7 @@ export default function AppRouter() {
 
             <Route
               path="/attendance"
-              element={
-                <PlaceholderPage title="Attendance" />
-              }
+              element={<AttendancePage />}
             />
 
             <Route

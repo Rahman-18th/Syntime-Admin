@@ -7,13 +7,14 @@ import {
 
 import LoginPage from '../features/auth/pages/LoginPage';
 import AdminLayout from '../layouts/AdminLayout';
-import DashboardPage from '../pages/DashboardPage';
+import DashboardPage from '../features/dashboard/pages/DashboardPage';
 import ProtectedRoute from './ProtectedRoute';
 import AnnouncementPage from '../features/announcemets/pages/AnnouncementPage';
 import EmployeePage from '../features/employees/pages/EmployeePage';
 import AttendancePage from '../features/attendance/pages/AttendancePage';
 import RequestPage from '../features/requests/pages/RequestPage';
 import PayslipPage from '../features/payslips/pages/PayslipPage';
+
 
 function PlaceholderPage({
   title,

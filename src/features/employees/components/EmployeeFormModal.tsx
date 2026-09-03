@@ -1,10 +1,20 @@
 import {
+  useEffect,
   useState,
 } from 'react';
 
+import axios from 'axios';
+
 import {
+  LoaderCircle,
   X,
 } from 'lucide-react';
+
+import {
+  getCompanies,
+  getDepartments,
+  getOffices,
+} from '../api/master-data.api';
 
 import type {
   CreateEmployeePayload,
@@ -12,6 +22,12 @@ import type {
   UpdateEmployeePayload,
   WorkType,
 } from '../types/employee.types';
+
+import type {
+  CompanyOption,
+  DepartmentOption,
+  OfficeOption,
+} from '../types/master-data.types';
 
 interface EmployeeFormModalProps {
   employee?: Employee | null;
@@ -58,13 +74,13 @@ export default function EmployeeFormModal({
   const [form, setForm] =
     useState<FormState>(() => ({
       companyId:
-        employee?.companyId ?? '1',
+        employee?.companyId ?? '',
 
       departmentId:
-        employee?.departmentId ?? '1',
+        employee?.departmentId ?? '',
 
       officeId:
-        employee?.officeId ?? '1',
+        employee?.officeId ?? '',
 
       employeeNumber:
         employee?.employeeNumber ?? '',
@@ -89,16 +105,186 @@ export default function EmployeeFormModal({
 
       joinDate:
         employee?.joinDate
-          ? employee.joinDate
-              .slice(0, 10)
+          ? employee.joinDate.slice(
+              0,
+              10,
+            )
           : '',
     }));
+
+  const [
+    companies,
+    setCompanies,
+  ] =
+    useState<CompanyOption[]>([]);
+
+  const [
+    departments,
+    setDepartments,
+  ] =
+    useState<DepartmentOption[]>([]);
+
+  const [
+    offices,
+    setOffices,
+  ] =
+    useState<OfficeOption[]>([]);
+
+  const [
+    isLoadingMasterData,
+    setIsLoadingMasterData,
+  ] =
+    useState(true);
+
+  const [
+    masterDataError,
+    setMasterDataError,
+  ] =
+    useState<string | null>(null);
+
+  /*
+  |--------------------------------------------------------------------------
+  | Initial Master Data
+  |--------------------------------------------------------------------------
+  */
+
+  useEffect(() => {
+  const initialCompanyId =
+    employee?.companyId ?? '';
+
+  async function loadInitialData() {
+    setIsLoadingMasterData(true);
+    setMasterDataError(null);
+
+    try {
+      const companyData =
+        await getCompanies();
+
+      setCompanies(companyData);
+
+      if (initialCompanyId) {
+        const [
+          departmentData,
+          officeData,
+        ] =
+          await Promise.all([
+            getDepartments(
+              initialCompanyId,
+            ),
+
+            getOffices(
+              initialCompanyId,
+            ),
+          ]);
+
+        setDepartments(
+          departmentData,
+        );
+
+        setOffices(
+          officeData,
+        );
+      }
+    } catch (error) {
+      setMasterDataError(
+        getErrorMessage(
+          error,
+          'Failed to load company, department, and office data.',
+        ),
+      );
+    } finally {
+      setIsLoadingMasterData(
+        false,
+      );
+    }
+  }
+
+  void loadInitialData();
+}, [employee?.companyId]);
+  /*
+  |--------------------------------------------------------------------------
+  | Company Change
+  |--------------------------------------------------------------------------
+  */
+
+  async function handleCompanyChange(
+    companyId: string,
+  ) {
+    setForm(
+      (current) => ({
+        ...current,
+
+        companyId,
+
+        departmentId: '',
+        officeId: '',
+      }),
+    );
+
+    setDepartments([]);
+    setOffices([]);
+
+    if (!companyId) {
+      return;
+    }
+
+    setIsLoadingMasterData(true);
+    setMasterDataError(null);
+
+    try {
+      const [
+        departmentData,
+        officeData,
+      ] =
+        await Promise.all([
+          getDepartments(companyId),
+          getOffices(companyId),
+        ]);
+
+      setDepartments(
+        departmentData,
+      );
+
+      setOffices(
+        officeData,
+      );
+    } catch (error) {
+      setMasterDataError(
+        getErrorMessage(
+          error,
+          'Failed to load departments and offices.',
+        ),
+      );
+    } finally {
+      setIsLoadingMasterData(
+        false,
+      );
+    }
+  }
+
+  /*
+  |--------------------------------------------------------------------------
+  | Submit
+  |--------------------------------------------------------------------------
+  */
 
   async function handleSubmit(
     event:
       React.FormEvent<HTMLFormElement>,
   ) {
     event.preventDefault();
+
+    if (
+      !form.companyId ||
+      !form.departmentId ||
+      !form.officeId
+    ) {
+      setMasterDataError(
+        'Company, department, and office are required.',
+      );
+
+      return;
+    }
 
     if (editing) {
       const payload:
@@ -222,10 +408,30 @@ export default function EmployeeFormModal({
             type="button"
             className="icon-button"
             onClick={onClose}
+            disabled={isSubmitting}
           >
             <X size={18} />
           </button>
         </div>
+
+        {masterDataError && (
+          <div className="error-banner">
+            <span>
+              {masterDataError}
+            </span>
+
+            <button
+              type="button"
+              onClick={() =>
+                setMasterDataError(
+                  null,
+                )
+              }
+            >
+              ×
+            </button>
+          </div>
+        )}
 
         <form
           className="form-stack"
@@ -245,6 +451,7 @@ export default function EmployeeFormModal({
                   setForm(
                     (current) => ({
                       ...current,
+
                       employeeNumber:
                         event.target
                           .value,
@@ -257,23 +464,36 @@ export default function EmployeeFormModal({
             </label>
 
             <label className="form-field">
-              <span>Company ID</span>
+              <span>Company</span>
 
-              <input
+              <select
                 value={form.companyId}
                 onChange={(event) =>
-                  setForm(
-                    (current) => ({
-                      ...current,
-                      companyId:
-                        event.target
-                          .value,
-                    }),
+                  void handleCompanyChange(
+                    event.target.value,
                   )
                 }
-                disabled={editing}
-                required={!editing}
-              />
+                disabled={
+                  editing ||
+                  isLoadingMasterData
+                }
+                required
+              >
+                <option value="">
+                  Select company
+                </option>
+
+                {companies.map(
+                  (company) => (
+                    <option
+                      key={company.id}
+                      value={company.id}
+                    >
+                      {company.name}
+                    </option>
+                  ),
+                )}
+              </select>
             </label>
           </div>
 
@@ -287,6 +507,7 @@ export default function EmployeeFormModal({
                   setForm(
                     (current) => ({
                       ...current,
+
                       firstName:
                         event.target
                           .value,
@@ -306,6 +527,7 @@ export default function EmployeeFormModal({
                   setForm(
                     (current) => ({
                       ...current,
+
                       lastName:
                         event.target
                           .value,
@@ -327,6 +549,7 @@ export default function EmployeeFormModal({
                   setForm(
                     (current) => ({
                       ...current,
+
                       email:
                         event.target
                           .value,
@@ -346,6 +569,7 @@ export default function EmployeeFormModal({
                   setForm(
                     (current) => ({
                       ...current,
+
                       phone:
                         event.target
                           .value,
@@ -359,10 +583,10 @@ export default function EmployeeFormModal({
           <div className="form-grid">
             <label className="form-field">
               <span>
-                Department ID
+                Department
               </span>
 
-              <input
+              <select
                 value={
                   form.departmentId
                 }
@@ -370,33 +594,82 @@ export default function EmployeeFormModal({
                   setForm(
                     (current) => ({
                       ...current,
+
                       departmentId:
                         event.target
                           .value,
                     }),
                   )
                 }
+                disabled={
+                  !form.companyId ||
+                  isLoadingMasterData
+                }
                 required
-              />
+              >
+                <option value="">
+                  Select department
+                </option>
+
+                {departments.map(
+                  (department) => (
+                    <option
+                      key={
+                        department.id
+                      }
+                      value={
+                        department.id
+                      }
+                    >
+                      {
+                        department.name
+                      }
+                    </option>
+                  ),
+                )}
+              </select>
             </label>
 
             <label className="form-field">
-              <span>Office ID</span>
+              <span>Office</span>
 
-              <input
+              <select
                 value={form.officeId}
                 onChange={(event) =>
                   setForm(
                     (current) => ({
                       ...current,
+
                       officeId:
                         event.target
                           .value,
                     }),
                   )
                 }
+                disabled={
+                  !form.companyId ||
+                  isLoadingMasterData
+                }
                 required
-              />
+              >
+                <option value="">
+                  Select office
+                </option>
+
+                {offices.map(
+                  (office) => (
+                    <option
+                      key={office.id}
+                      value={office.id}
+                    >
+                      {office.name}
+                      {office.address
+                        ? ` - ${office.address}`
+                        : ''}
+                    </option>
+                  ),
+                )}
+              </select>
             </label>
           </div>
 
@@ -410,6 +683,7 @@ export default function EmployeeFormModal({
                   setForm(
                     (current) => ({
                       ...current,
+
                       position:
                         event.target
                           .value,
@@ -428,6 +702,7 @@ export default function EmployeeFormModal({
                   setForm(
                     (current) => ({
                       ...current,
+
                       workType:
                         event.target
                           .value as
@@ -470,6 +745,7 @@ export default function EmployeeFormModal({
                 setForm(
                   (current) => ({
                     ...current,
+
                     joinDate:
                       event.target.value,
                   }),
@@ -477,6 +753,17 @@ export default function EmployeeFormModal({
               }
             />
           </label>
+
+          {isLoadingMasterData && (
+            <div className="master-data-loading">
+              <LoaderCircle
+                size={16}
+                className="spin"
+              />
+
+              Loading work assignment data...
+            </div>
+          )}
 
           <div className="modal-footer">
             <button
@@ -491,7 +778,10 @@ export default function EmployeeFormModal({
             <button
               type="submit"
               className="primary-button"
-              disabled={isSubmitting}
+              disabled={
+                isSubmitting ||
+                isLoadingMasterData
+              }
             >
               {isSubmitting
                 ? 'Saving...'
@@ -504,4 +794,22 @@ export default function EmployeeFormModal({
       </div>
     </div>
   );
+}
+
+function getErrorMessage(
+  error: unknown,
+  fallback: string,
+) {
+  if (
+    axios.isAxiosError(error)
+  ) {
+    return (
+      error.response
+        ?.data
+        ?.message ??
+      fallback
+    );
+  }
+
+  return fallback;
 }

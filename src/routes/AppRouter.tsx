@@ -15,22 +15,12 @@ import AttendancePage from '../features/attendance/pages/AttendancePage';
 import RequestPage from '../features/requests/pages/RequestPage';
 import PayslipPage from '../features/payslips/pages/PayslipPage';
 import MasterDataPage from '../features/master-data/pages/MasterDataPage';
+import NotificationPage from '../features/notifications/pages/NotificationPage';
 
 
-function PlaceholderPage({
-  title,
-}: {
-  title: string;
-}) {
-  return (
-    <div>
-      <h1>{title}</h1>
-      <p>
-        This module will be implemented next.
-      </p>
-    </div>
-  );
-}
+
+
+
 
 export default function AppRouter() {
   return (
@@ -94,9 +84,7 @@ export default function AppRouter() {
 
             <Route
               path="/notifications"
-              element={
-                <PlaceholderPage title="Notifications" />
-              }
+              element={<NotificationPage />}
             />
           </Route>
         </Route>

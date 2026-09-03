@@ -9,6 +9,7 @@ import LoginPage from '../features/auth/pages/LoginPage';
 import AdminLayout from '../layouts/AdminLayout';
 import DashboardPage from '../pages/DashboardPage';
 import ProtectedRoute from './ProtectedRoute';
+import AnnouncementPage from '../features/announcemets/pages/AnnouncementPage';
 
 function PlaceholderPage({
   title,
@@ -84,10 +85,8 @@ export default function AppRouter() {
             />
 
             <Route
-              path="/announcements"
-              element={
-                <PlaceholderPage title="Announcements" />
-              }
+             path="/announcements"
+             element={<AnnouncementPage />}
             />
 
             <Route

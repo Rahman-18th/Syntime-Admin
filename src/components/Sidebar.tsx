@@ -1,5 +1,6 @@
 import {
   Bell,
+  Building2,
   ClipboardList,
   Clock3,
   LayoutDashboard,
@@ -25,6 +26,11 @@ const mainMenu = [
     label: 'Employees',
     path: '/employees',
     icon: UserRound,
+  },
+  {
+    label: 'Master Data',
+    path: '/master-data',
+    icon: Building2,
   },
   {
     label: 'Attendance',

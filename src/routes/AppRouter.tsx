@@ -14,6 +14,7 @@ import EmployeePage from '../features/employees/pages/EmployeePage';
 import AttendancePage from '../features/attendance/pages/AttendancePage';
 import RequestPage from '../features/requests/pages/RequestPage';
 import PayslipPage from '../features/payslips/pages/PayslipPage';
+import MasterDataPage from '../features/master-data/pages/MasterDataPage';
 
 
 function PlaceholderPage({
@@ -64,6 +65,11 @@ export default function AppRouter() {
             <Route
               path="/employees"
               element={<EmployeePage />}
+            />
+
+            <Route
+              path="/master-data"
+              element={<MasterDataPage />}
             />
 
             <Route

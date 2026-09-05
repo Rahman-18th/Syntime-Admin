@@ -17,6 +17,7 @@ import PayslipPage from '../features/payslips/pages/PayslipPage';
 import MasterDataPage from '../features/master-data/pages/MasterDataPage';
 import NotificationPage from '../features/notifications/pages/NotificationPage';
 import RbacPage from '../features/rbac/pages/RbacPage';
+import SettingsPage from '../features/settings/pages/SettingsPage';
 
 
 
@@ -88,10 +89,18 @@ export default function AppRouter() {
             />
 
             <Route
+            path="/settings"
+            element={<SettingsPage />}
+            />
+
+            <Route
               path="/access-control"
               element={<RbacPage />}
             />
           </Route>
+          
+
+          
         </Route>
 
         <Route

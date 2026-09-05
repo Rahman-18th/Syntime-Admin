@@ -148,13 +148,19 @@ export default function Sidebar() {
       </div>
 
       <div className="sidebar-footer">
-        <button
-          type="button"
-          className="sidebar-secondary-button"
-        >
-          <Settings size={18} />
-          <span>Settings</span>
-        </button>
+        <NavLink
+  to="/settings"
+  className={({ isActive }) =>
+    `sidebar-secondary-button ${
+      isActive
+        ? "sidebar-link-active"
+        : ""
+    }`
+  }
+>
+  <Settings size={18} />
+  <span>Settings</span>
+</NavLink>
 
         <button
           type="button"

@@ -41,6 +41,32 @@ export default function UserRolePanel({
   const [search, setSearch] =
     useState("");
 
+  const adminRole =
+    roles.find(
+      (role) =>
+        role.name === "admin"
+    ) ?? null;
+
+  const activeAdminCount =
+    useMemo(() => {
+      if (!adminRole) {
+        return 0;
+      }
+
+      return users.filter(
+        (user) =>
+          user.isActive &&
+          user.roles.some(
+            (item) =>
+              item.roleId ===
+              adminRole.id
+          )
+      ).length;
+    }, [
+      users,
+      adminRole,
+    ]);
+
   const filteredUsers =
     useMemo(() => {
       const query =
@@ -220,46 +246,60 @@ export default function UserRolePanel({
                           </span>
                         ) : (
                           user.roles.map(
-                            (item) => (
-                              <span
-                                key={
-                                  item.roleId
-                                }
-                                className="rbac-role-badge"
-                              >
-                                <Shield
-                                  size={
-                                    12
-                                  }
-                                />
+                            (item) => {
+                              const isLastActiveAdmin =
+                                user.isActive &&
+                                item.role.name ===
+                                  "admin" &&
+                                activeAdminCount <=
+                                  1;
 
-                                {
-                                  item
-                                    .role
-                                    .name
-                                }
-
-                                <button
-                                  type="button"
-                                  title={`Remove ${item.role.name}`}
-                                  disabled={
-                                    isMutating
+                              return (
+                                <span
+                                  key={
+                                    item.roleId
                                   }
-                                  onClick={() =>
-                                    void onRemoveRole(
-                                      user.id,
-                                      item.roleId
-                                    )
-                                  }
+                                  className="rbac-role-badge"
                                 >
-                                  <X
+                                  <Shield
                                     size={
                                       12
                                     }
                                   />
-                                </button>
-                              </span>
-                            )
+
+                                  {
+                                    item
+                                      .role
+                                      .name
+                                  }
+
+                                  <button
+                                    type="button"
+                                    title={
+                                      isLastActiveAdmin
+                                        ? "Cannot remove the admin role from the last active administrator."
+                                        : `Remove ${item.role.name}`
+                                    }
+                                    disabled={
+                                      isMutating ||
+                                      isLastActiveAdmin
+                                    }
+                                    onClick={() =>
+                                      void onRemoveRole(
+                                        user.id,
+                                        item.roleId
+                                      )
+                                    }
+                                  >
+                                    <X
+                                      size={
+                                        12
+                                      }
+                                    />
+                                  </button>
+                                </span>
+                              );
+                            }
                           )
                         )}
                       </div>

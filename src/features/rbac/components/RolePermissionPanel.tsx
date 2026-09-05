@@ -25,6 +25,12 @@ interface Props {
   ) => Promise<void>;
 }
 
+const PROTECTED_ADMIN_PERMISSIONS =
+  new Set([
+    "rbac.view",
+    "rbac.manage",
+  ]);
+
 export default function RolePermissionPanel({
   roles,
   permissions,
@@ -162,19 +168,38 @@ export default function RolePermissionPanel({
                     permission.id
                   );
 
+                const isProtected =
+                  selectedRole.name ===
+                    "admin" &&
+                  PROTECTED_ADMIN_PERMISSIONS.has(
+                    permission.name
+                  );
+
                 return (
                   <button
                     key={
                       permission.id
                     }
                     type="button"
-                    className={
+                    className={[
+                      "rbac-permission-item",
                       assigned
-                        ? "rbac-permission-item assigned"
-                        : "rbac-permission-item"
-                    }
+                        ? "assigned"
+                        : "",
+                      isProtected
+                        ? "protected"
+                        : "",
+                    ]
+                      .filter(Boolean)
+                      .join(" ")}
                     disabled={
-                      isMutating
+                      isMutating ||
+                      isProtected
+                    }
+                    title={
+                      isProtected
+                        ? "This permission is required to prevent administrator lockout."
+                        : undefined
                     }
                     onClick={() =>
                       void onTogglePermission(
@@ -202,6 +227,12 @@ export default function RolePermissionPanel({
                         {permission.description ??
                           "No description"}
                       </span>
+
+                      {isProtected && (
+                        <small className="rbac-protected-text">
+                          Protected permission
+                        </small>
+                      )}
                     </div>
                   </button>
                 );

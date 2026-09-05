@@ -38,7 +38,14 @@ import type {
 import AccountCredentialModal
   from '../components/AccountCredentialModal';
 
+  import {
+  useToast,
+} from '../../../components/toast/useToast';
+
 export default function EmployeePage() {
+   const { showToast } =
+    useToast();
+
   const [items, setItems] =
     useState<Employee[]>([]);
 
@@ -171,9 +178,11 @@ export default function EmployeePage() {
       | UpdateEmployeePayload,
   ) {
     setIsSubmitting(true);
-    setError(null);
 
     try {
+      const isEditing =
+        Boolean(selectedEmployee);
+
       if (selectedEmployee) {
         await updateEmployee(
           selectedEmployee.id,
@@ -189,13 +198,25 @@ export default function EmployeePage() {
       setSelectedEmployee(null);
 
       await loadEmployees();
+
+      showToast({
+        type: 'success',
+        title: isEditing
+          ? 'Employee updated'
+          : 'Employee created',
+        message: isEditing
+          ? 'Employee information was updated successfully.'
+          : 'New employee was created successfully.',
+      });
     } catch (error) {
-      setError(
-        getErrorMessage(
+      showToast({
+        type: 'error',
+        title: 'Save failed',
+        message: getErrorMessage(
           error,
           'Failed to save employee.',
         ),
-      );
+      });
     } finally {
       setIsSubmitting(false);
     }
@@ -220,8 +241,6 @@ export default function EmployeePage() {
       return;
     }
 
-    setError(null);
-
     try {
       await updateEmployeeStatus(
         employee.id,
@@ -229,13 +248,24 @@ export default function EmployeePage() {
       );
 
       await loadEmployees();
+
+      showToast({
+        type: 'success',
+        title:
+          nextStatus === 'active'
+            ? 'Employee activated'
+            : 'Employee deactivated',
+        message: `${employee.firstName}'s status was updated successfully.`,
+      });
     } catch (error) {
-      setError(
-        getErrorMessage(
+      showToast({
+        type: 'error',
+        title: 'Status update failed',
+        message: getErrorMessage(
           error,
           'Failed to update employee status.',
         ),
-      );
+      });
     }
   }
 
@@ -251,8 +281,6 @@ export default function EmployeePage() {
       return;
     }
 
-    setError(null);
-
     try {
       const result =
         await createEmployeeAccount(
@@ -267,13 +295,21 @@ export default function EmployeePage() {
       });
 
       await loadEmployees();
+
+      showToast({
+        type: 'success',
+        title: 'Account created',
+        message: `Login account for ${employee.firstName} was created successfully.`,
+      });
     } catch (error) {
-      setError(
-        getErrorMessage(
+      showToast({
+        type: 'error',
+        title: 'Account creation failed',
+        message: getErrorMessage(
           error,
           'Failed to create employee account.',
         ),
-      );
+      });
     }
   }
 
@@ -289,8 +325,6 @@ export default function EmployeePage() {
       return;
     }
 
-    setError(null);
-
     try {
       const result =
         await resetEmployeePassword(
@@ -303,13 +337,21 @@ export default function EmployeePage() {
           result.temporaryPassword,
         title: 'Password Reset',
       });
+
+      showToast({
+        type: 'success',
+        title: 'Password reset',
+        message: `A new temporary password was generated for ${employee.firstName}.`,
+      });
     } catch (error) {
-      setError(
-        getErrorMessage(
+      showToast({
+        type: 'error',
+        title: 'Password reset failed',
+        message: getErrorMessage(
           error,
           'Failed to reset employee password.',
         ),
-      );
+      });
     }
   }
 
@@ -337,8 +379,6 @@ export default function EmployeePage() {
       return;
     }
 
-    setError(null);
-
     try {
       await updateEmployeeAccountStatus(
         employee.id,
@@ -346,13 +386,27 @@ export default function EmployeePage() {
       );
 
       await loadEmployees();
+
+      showToast({
+        type: 'success',
+        title: nextStatus
+          ? 'Login enabled'
+          : 'Login disabled',
+        message: `${employee.firstName}'s login account was ${
+          nextStatus
+            ? 'enabled'
+            : 'disabled'
+        } successfully.`,
+      });
     } catch (error) {
-      setError(
-        getErrorMessage(
+      showToast({
+        type: 'error',
+        title: 'Account update failed',
+        message: getErrorMessage(
           error,
           'Failed to update login account.',
         ),
-      );
+      });
     }
   }
 

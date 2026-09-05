@@ -30,6 +30,10 @@ import type {
   ReviewRequestPayload,
 } from '../types/request.types';
 
+import {
+  useToast,
+} from '../../../components/toast/useToast';
+
 type StatusFilter =
   | 'all'
   | 'pending'
@@ -43,6 +47,9 @@ type TypeFilter =
   | 'attendance_correction';
 
 export default function RequestPage() {
+  const { showToast } =
+    useToast();
+
   const [items, setItems] =
     useState<EmployeeRequest[]>([]);
 
@@ -170,24 +177,51 @@ export default function RequestPage() {
     }
 
     setIsSubmitting(true);
-    setError(null);
 
     try {
+      const reviewedRequest =
+        selectedRequest;
+
       await reviewRequest(
-        selectedRequest.id,
+        reviewedRequest.id,
         payload,
       );
 
       setSelectedRequest(null);
 
       await loadRequests();
+
+      const employeeName = [
+        reviewedRequest.employee.firstName,
+        reviewedRequest.employee.lastName,
+      ]
+        .filter(Boolean)
+        .join(' ');
+
+      if (
+        payload.status === 'approved'
+      ) {
+        showToast({
+          type: 'success',
+          title: 'Request approved',
+          message: `${employeeName}'s request was approved successfully.`,
+        });
+      } else {
+        showToast({
+          type: 'success',
+          title: 'Request rejected',
+          message: `${employeeName}'s request was rejected successfully.`,
+        });
+      }
     } catch (error) {
-      setError(
-        getErrorMessage(
+      showToast({
+        type: 'error',
+        title: 'Review failed',
+        message: getErrorMessage(
           error,
           'Failed to review request.',
         ),
-      );
+      });
     } finally {
       setIsSubmitting(false);
     }

@@ -40,6 +40,10 @@ import type {
   CreateNotificationPayload,
 } from '../types/notification.types';
 
+import {
+  useToast,
+} from '../../../components/toast/useToast';
+
 type ReadFilter =
   | 'all'
   | 'read'
@@ -55,6 +59,9 @@ type TypeFilter =
   | 'payroll';
 
 export default function NotificationPage() {
+  const { showToast } =
+    useToast();
+
   const [
     notifications,
     setNotifications,
@@ -196,9 +203,15 @@ export default function NotificationPage() {
     payload: CreateNotificationPayload,
   ) {
     setIsSubmitting(true);
-    setError(null);
 
     try {
+      const employee =
+        employees.find(
+          (item) =>
+            item.id ===
+            payload.employeeId,
+        );
+
       await createNotification(
         payload,
       );
@@ -206,13 +219,31 @@ export default function NotificationPage() {
       setModalOpen(false);
 
       await loadData();
+
+      const employeeName =
+        employee
+          ? [
+              employee.firstName,
+              employee.lastName,
+            ]
+              .filter(Boolean)
+              .join(' ')
+          : 'employee';
+
+      showToast({
+        type: 'success',
+        title: 'Notification sent',
+        message: `Notification was sent to ${employeeName} successfully.`,
+      });
     } catch (error) {
-      setError(
-        getErrorMessage(
+      showToast({
+        type: 'error',
+        title: 'Send failed',
+        message: getErrorMessage(
           error,
           'Failed to send notification.',
         ),
-      );
+      });
     } finally {
       setIsSubmitting(false);
     }

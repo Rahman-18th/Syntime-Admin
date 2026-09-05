@@ -44,12 +44,19 @@ import type {
   OfficePayload,
 } from '../types/master-data.types';
 
+import {
+  useToast,
+} from '../../../components/toast/useToast';
+
 type Tab =
   | 'companies'
   | 'departments'
   | 'offices';
 
 export default function MasterDataPage() {
+  const { showToast } =
+    useToast();
+
   const [tab, setTab] =
     useState<Tab>('companies');
 
@@ -155,26 +162,39 @@ export default function MasterDataPage() {
     setIsSubmitting(true);
 
     try {
-      if (selectedCompany) {
-        await updateCompany(
-          selectedCompany.id,
-          payload,
-        );
-      } else {
-        await createCompany(
-          payload,
-        );
-      }
+      const isEditing =
+        Boolean(selectedCompany);
+
+      await (
+        selectedCompany
+          ? updateCompany(
+              selectedCompany.id,
+              payload,
+            )
+          : createCompany(payload)
+      );
 
       closeModal();
       await loadData();
+
+      showToast({
+        type: 'success',
+        title: isEditing
+          ? 'Company updated'
+          : 'Company created',
+        message: isEditing
+          ? 'Company information was updated successfully.'
+          : 'New company was created successfully.',
+      });
     } catch (error) {
-      setError(
-        getErrorMessage(
+      showToast({
+        type: 'error',
+        title: 'Company save failed',
+        message: getErrorMessage(
           error,
           'Failed to save company.',
         ),
-      );
+      });
     } finally {
       setIsSubmitting(false);
     }
@@ -186,26 +206,41 @@ export default function MasterDataPage() {
     setIsSubmitting(true);
 
     try {
-      if (selectedDepartment) {
-        await updateDepartment(
-          selectedDepartment.id,
-          payload,
-        );
-      } else {
-        await createDepartment(
-          payload,
-        );
-      }
+      const isEditing =
+        Boolean(selectedDepartment);
+
+      await (
+        selectedDepartment
+          ? updateDepartment(
+              selectedDepartment.id,
+              payload,
+            )
+          : createDepartment(
+              payload,
+            )
+      );
 
       closeModal();
       await loadData();
+
+      showToast({
+        type: 'success',
+        title: isEditing
+          ? 'Department updated'
+          : 'Department created',
+        message: isEditing
+          ? 'Department information was updated successfully.'
+          : 'New department was created successfully.',
+      });
     } catch (error) {
-      setError(
-        getErrorMessage(
+      showToast({
+        type: 'error',
+        title: 'Department save failed',
+        message: getErrorMessage(
           error,
           'Failed to save department.',
         ),
-      );
+      });
     } finally {
       setIsSubmitting(false);
     }
@@ -217,26 +252,38 @@ export default function MasterDataPage() {
     setIsSubmitting(true);
 
     try {
-      if (selectedOffice) {
-        await updateOffice(
-          selectedOffice.id,
-          payload,
-        );
-      } else {
-        await createOffice(
-          payload,
-        );
-      }
+      const isEditing =
+        Boolean(selectedOffice);
+
+      await (
+        selectedOffice
+          ? updateOffice(
+              selectedOffice.id,
+              payload,
+            )
+          : createOffice(payload)
+      );
 
       closeModal();
       await loadData();
+      showToast({
+        type: 'success',
+        title: isEditing
+          ? 'Office updated'
+          : 'Office created',
+        message: isEditing
+          ? 'Office information was updated successfully.'
+          : 'New office was created successfully.',
+      });
     } catch (error) {
-      setError(
-        getErrorMessage(
+      showToast({
+        type: 'error',
+        title: 'Office save failed',
+        message: getErrorMessage(
           error,
           'Failed to save office.',
         ),
-      );
+      });
     } finally {
       setIsSubmitting(false);
     }

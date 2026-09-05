@@ -44,12 +44,19 @@ import type {
   UpdatePayslipPayload,
 } from '../types/payslip.types';
 
+import {
+  useToast,
+} from '../../../components/toast/useToast';
+
 type StatusFilter =
   | 'all'
   | 'draft'
   | 'published';
 
 export default function PayslipPage() {
+  const { showToast } =
+    useToast();
+
   const [items, setItems] =
     useState<Payslip[]>([]);
 
@@ -224,9 +231,11 @@ export default function PayslipPage() {
       | UpdatePayslipPayload,
   ) {
     setIsSubmitting(true);
-    setError(null);
 
     try {
+      const isEditing =
+        Boolean(selectedPayslip);
+
       if (selectedPayslip) {
         await updatePayslip(
           selectedPayslip.id,
@@ -242,13 +251,25 @@ export default function PayslipPage() {
       setSelectedPayslip(null);
 
       await loadData();
+
+      showToast({
+        type: 'success',
+        title: isEditing
+          ? 'Payslip updated'
+          : 'Payslip created',
+        message: isEditing
+          ? 'Payslip information was updated successfully.'
+          : 'New payslip was created successfully.',
+      });
     } catch (error) {
-      setError(
-        getErrorMessage(
+      showToast({
+        type: 'error',
+        title: 'Payslip save failed',
+        message: getErrorMessage(
           error,
           'Failed to save payslip.',
         ),
-      );
+      });
     } finally {
       setIsSubmitting(false);
     }

@@ -35,11 +35,18 @@ import type {
   Role,
 } from "../types/rbac.types";
 
+import {
+  useToast,
+} from "../../../components/toast/useToast";
+
 type Tab =
   | "permissions"
   | "users";
 
 export default function RbacPage() {
+  const { showToast } =
+    useToast();
+
   const [roles, setRoles] =
     useState<Role[]>([]);
 
@@ -132,8 +139,19 @@ export default function RbacPage() {
       return;
     }
 
+    const selectedRole =
+      roles.find(
+        (role) =>
+          role.id === selectedRoleId
+      );
+
+    const permission =
+      permissions.find(
+        (item) =>
+          item.id === permissionId
+      );
+
     setIsMutating(true);
-    setError(null);
 
     try {
       if (assigned) {
@@ -149,13 +167,27 @@ export default function RbacPage() {
       }
 
       await reloadRoles();
+
+      showToast({
+        type: "success",
+        title: assigned
+          ? "Permission removed"
+          : "Permission assigned",
+        message: `${permission?.name ?? "Permission"} was ${
+          assigned
+            ? "removed from"
+            : "assigned to"
+        } ${selectedRole?.name ?? "the role"}.`,
+      });
     } catch (error) {
-      setError(
-        getErrorMessage(
+      showToast({
+        type: "error",
+        title: "Permission update failed",
+        message: getErrorMessage(
           error,
           "Failed to update role permission."
-        )
-      );
+        ),
+      });
     } finally {
       setIsMutating(false);
     }
@@ -165,8 +197,19 @@ export default function RbacPage() {
     userId: string,
     roleId: string
   ) {
+    const user =
+      users.find(
+        (item) =>
+          item.id === userId
+      );
+
+    const role =
+      roles.find(
+        (item) =>
+          item.id === roleId
+      );
+
     setIsMutating(true);
-    setError(null);
 
     try {
       await assignRoleToUser(
@@ -175,13 +218,21 @@ export default function RbacPage() {
       );
 
       await reloadUsers();
+
+      showToast({
+        type: "success",
+        title: "Role assigned",
+        message: `${role?.name ?? "Role"} was assigned to ${getUserDisplayName(user)}.`,
+      });
     } catch (error) {
-      setError(
-        getErrorMessage(
+      showToast({
+        type: "error",
+        title: "Role assignment failed",
+        message: getErrorMessage(
           error,
           "Failed to assign role."
-        )
-      );
+        ),
+      });
     } finally {
       setIsMutating(false);
     }
@@ -195,6 +246,12 @@ export default function RbacPage() {
       users.find(
         (item) =>
           item.id === userId
+      );
+
+    const role =
+      roles.find(
+        (item) =>
+          item.id === roleId
       );
 
     if (
@@ -212,7 +269,6 @@ export default function RbacPage() {
     }
 
     setIsMutating(true);
-    setError(null);
 
     try {
       await removeRoleFromUser(
@@ -221,13 +277,21 @@ export default function RbacPage() {
       );
 
       await reloadUsers();
+
+      showToast({
+        type: "success",
+        title: "Role removed",
+        message: `${role?.name ?? "Role"} was removed from ${getUserDisplayName(user)}.`,
+      });
     } catch (error) {
-      setError(
-        getErrorMessage(
+      showToast({
+        type: "error",
+        title: "Role removal failed",
+        message: getErrorMessage(
           error,
           "Failed to remove role."
-        )
-      );
+        ),
+      });
     } finally {
       setIsMutating(false);
     }
@@ -466,6 +530,25 @@ function RbacStat({
       </div>
     </article>
   );
+}
+
+function getUserDisplayName(
+  user: RbacUser | undefined
+) {
+  if (!user) {
+    return "user";
+  }
+
+  if (user.employee) {
+    return [
+      user.employee.firstName,
+      user.employee.lastName,
+    ]
+      .filter(Boolean)
+      .join(" ");
+  }
+
+  return user.email;
 }
 
 function getErrorMessage(

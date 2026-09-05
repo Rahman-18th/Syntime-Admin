@@ -33,7 +33,13 @@ import type {
   SystemSettings,
 } from "../types/settings.types";
 
+import {
+  useToast,
+} from "../../../components/toast/useToast";
+
 export default function SettingsPage() {
+  const { showToast } = useToast();
+
   const [
     settings,
     setSettings,
@@ -74,13 +80,6 @@ export default function SettingsPage() {
     setError,
   ] =
     useState<string | null>(null);
-
-  const [
-    success,
-    setSuccess,
-  ] =
-    useState<string | null>(null);
-
 
   useEffect(() => {
     let isMounted = true;
@@ -156,7 +155,6 @@ export default function SettingsPage() {
       })
     );
 
-    setSuccess(null);
   }
 
   function handleCompanyChange(
@@ -171,13 +169,11 @@ export default function SettingsPage() {
       })
     );
 
-    setSuccess(null);
   }
 
   async function handleSave() {
     setIsSaving(true);
     setError(null);
-    setSuccess(null);
 
     try {
       const updated =
@@ -187,16 +183,21 @@ export default function SettingsPage() {
 
       setSettings(updated);
 
-      setSuccess(
-        "Settings saved successfully."
-      );
+      showToast({
+        type: "success",
+        title: "Settings saved",
+        message:
+          "System settings were updated successfully.",
+      });
     } catch (error) {
-      setError(
-        getErrorMessage(
+      showToast({
+        type: "error",
+        title: "Save failed",
+        message: getErrorMessage(
           error,
           "Failed to save settings."
-        )
-      );
+        ),
+      });
     } finally {
       setIsSaving(false);
     }
@@ -260,12 +261,6 @@ export default function SettingsPage() {
           >
             ×
           </button>
-        </div>
-      )}
-
-      {success && (
-        <div className="success-banner">
-          {success}
         </div>
       )}
 

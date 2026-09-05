@@ -29,6 +29,10 @@ import RolePermissionPanel
 import UserRolePanel
   from "../components/UserRolePanel";
 
+import {
+  useConfirm,
+} from "../../../components/confirm/useConfirm";
+
 import type {
   Permission,
   RbacUser,
@@ -46,6 +50,9 @@ type Tab =
 export default function RbacPage() {
   const { showToast } =
     useToast();
+
+  const { confirm } =
+    useConfirm();
 
   const [roles, setRoles] =
     useState<Role[]>([]);
@@ -259,9 +266,13 @@ export default function RbacPage() {
       user.roles.length <= 1
     ) {
       const confirmed =
-        window.confirm(
-          "This is the user's last role. Remove it anyway?"
-        );
+        await confirm({
+          title: "Remove last role",
+          message:
+            "This is the user's last assigned role. Removing it may leave the user without application access.",
+          confirmText: "Remove Role",
+          tone: "danger",
+        });
 
       if (!confirmed) {
         return;

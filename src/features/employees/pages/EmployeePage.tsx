@@ -29,22 +29,29 @@ import EmployeeFormModal
 import EmployeeTable
   from '../components/EmployeeTable';
 
+import AccountCredentialModal
+  from '../components/AccountCredentialModal';
+
 import type {
   CreateEmployeePayload,
   Employee,
   UpdateEmployeePayload,
 } from '../types/employee.types';
 
-import AccountCredentialModal
-  from '../components/AccountCredentialModal';
-
-  import {
+import {
   useToast,
 } from '../../../components/toast/useToast';
 
+import {
+  useConfirm,
+} from '../../../components/confirm/useConfirm';
+
 export default function EmployeePage() {
-   const { showToast } =
+  const { showToast } =
     useToast();
+
+  const { confirm } =
+    useConfirm();
 
   const [items, setItems] =
     useState<Employee[]>([]);
@@ -74,7 +81,7 @@ export default function EmployeePage() {
       null,
     );
 
-    const [
+  const [
   credentialResult,
   setCredentialResult,
 ] = useState<{
@@ -231,11 +238,25 @@ export default function EmployeePage() {
         : 'active';
 
     const confirmed =
-      window.confirm(
-        `${nextStatus === 'inactive'
-          ? 'Deactivate'
-          : 'Activate'} ${employee.firstName}?`,
-      );
+      await confirm({
+        title:
+          nextStatus === 'inactive'
+            ? 'Deactivate employee'
+            : 'Activate employee',
+        message: `${
+          nextStatus === 'inactive'
+            ? 'Deactivate'
+            : 'Activate'
+        } ${employee.firstName}?`,
+        confirmText:
+          nextStatus === 'inactive'
+            ? 'Deactivate'
+            : 'Activate',
+        tone:
+          nextStatus === 'inactive'
+            ? 'danger'
+            : 'default',
+      });
 
     if (!confirmed) {
       return;
@@ -273,9 +294,12 @@ export default function EmployeePage() {
     employee: Employee,
   ) {
     const confirmed =
-      window.confirm(
-        `Create login account for ${employee.firstName}?`,
-      );
+      await confirm({
+        title: 'Create login account',
+        message: `Create a login account for ${employee.firstName}? A temporary password will be generated.`,
+        confirmText: 'Create Account',
+        tone: 'default',
+      });
 
     if (!confirmed) {
       return;
@@ -317,9 +341,12 @@ export default function EmployeePage() {
     employee: Employee,
   ) {
     const confirmed =
-      window.confirm(
-        `Reset password for ${employee.firstName}?`,
-      );
+      await confirm({
+        title: 'Reset password',
+        message: `Reset the login password for ${employee.firstName}? The current password will no longer work.`,
+        confirmText: 'Reset Password',
+        tone: 'danger',
+      });
 
     if (!confirmed) {
       return;
@@ -371,9 +398,16 @@ export default function EmployeePage() {
         : 'Disable';
 
     const confirmed =
-      window.confirm(
-        `${action} login for ${employee.firstName}?`,
-      );
+      await confirm({
+        title: nextStatus
+          ? 'Enable login account'
+          : 'Disable login account',
+        message: `${action} login access for ${employee.firstName}?`,
+        confirmText: action,
+        tone: nextStatus
+          ? 'default'
+          : 'danger',
+      });
 
     if (!confirmed) {
       return;

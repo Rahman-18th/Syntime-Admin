@@ -6,6 +6,10 @@ import {
   ToastProvider,
 } from "./components/toast/ToastProvider";
 
+import {
+  ConfirmProvider,
+} from "./components/confirm/ConfirmProvider";
+
 createRoot(
   document.getElementById(
     "root"
@@ -13,7 +17,9 @@ createRoot(
 ).render(
   <StrictMode>
     <ToastProvider>
-      <App />
-    </ToastProvider>
+  <ConfirmProvider>
+    <App />
+  </ConfirmProvider>
+</ToastProvider>
   </StrictMode>
 );

@@ -1,6 +1,6 @@
 import {
+  useCallback,
   useEffect,
-  useMemo,
   useState,
 } from 'react';
 
@@ -16,7 +16,7 @@ import {
 import {
   createEmployee,
   createEmployeeAccount,
-  getEmployees,
+  getEmployeesPaginated,
   resetEmployeePassword,
   updateEmployee,
   updateEmployeeAccountStatus,
@@ -35,8 +35,18 @@ import AccountCredentialModal
 import type {
   CreateEmployeePayload,
   Employee,
+  EmployeePaginationMeta,
+  EmployeeStatus,
   UpdateEmployeePayload,
 } from '../types/employee.types';
+
+import {
+  getDepartments,
+} from '../../master-data/api/master-data.api';
+
+import type {
+  Department,
+} from '../../master-data/types/master-data.types';
 
 import {
   useToast,
@@ -58,6 +68,34 @@ export default function EmployeePage() {
 
   const [search, setSearch] =
     useState('');
+
+  const [appliedSearch, setAppliedSearch] =
+    useState('');
+
+  const [page, setPage] =
+    useState(1);
+
+  const [limit, setLimit] =
+    useState(10);
+
+  const [statusFilter, setStatusFilter] =
+    useState<'all' | EmployeeStatus>('all');
+
+  const [departmentFilter, setDepartmentFilter] =
+    useState('all');
+
+  const [pagination, setPagination] =
+    useState<EmployeePaginationMeta>({
+      page: 1,
+      limit: 10,
+      total: 0,
+      totalPages: 0,
+      hasNextPage: false,
+      hasPreviousPage: false,
+    });
+
+  const [departments, setDepartments] =
+    useState<Department[]>([]);
 
   const [isLoading, setIsLoading] =
     useState(true);
@@ -90,73 +128,100 @@ export default function EmployeePage() {
   title: string;
 } | null>(null);
 
+  const loadEmployees =
+    useCallback(async () => {
+      setIsLoading(true);
+      setError(null);
+
+      try {
+        const result =
+          await getEmployeesPaginated({
+            page,
+            limit,
+            ...(appliedSearch && {
+              search: appliedSearch,
+            }),
+            ...(statusFilter !== 'all' && {
+              status: statusFilter,
+            }),
+            ...(departmentFilter !== 'all' && {
+              departmentId: departmentFilter,
+            }),
+          });
+
+        setItems(result.data);
+        setPagination(result.meta);
+      } catch (error) {
+        setError(
+          getErrorMessage(
+            error,
+            'Failed to load employees.',
+          ),
+        );
+      } finally {
+        setIsLoading(false);
+      }
+    }, [
+      page,
+      limit,
+      appliedSearch,
+      statusFilter,
+      departmentFilter,
+    ]);
+
+  const loadDepartments =
+    useCallback(async () => {
+      try {
+        const data =
+          await getDepartments();
+
+        setDepartments(data);
+      } catch (error) {
+        showToast({
+          type: 'error',
+          title: 'Department load failed',
+          message: getErrorMessage(
+            error,
+            'Failed to load departments.',
+          ),
+        });
+      }
+    }, [showToast]);
+
   useEffect(() => {
-    void loadEmployees();
-  }, []);
+  const timeoutId =
+    window.setTimeout(() => {
+      void loadDepartments();
+    }, 0);
 
-  async function loadEmployees() {
-    setIsLoading(true);
-    setError(null);
+  return () =>
+    window.clearTimeout(
+      timeoutId,
+    );
+}, [loadDepartments]);
 
-    try {
-      const data =
-        await getEmployees();
+useEffect(() => {
+  const timeoutId =
+    window.setTimeout(() => {
+      void loadEmployees();
+    }, 0);
 
-      setItems(data);
-    } catch (error) {
-      setError(
-        getErrorMessage(
-          error,
-          'Failed to load employees.',
-        ),
-      );
-    } finally {
-      setIsLoading(false);
+  return () =>
+    window.clearTimeout(
+      timeoutId,
+    );
+}, [loadEmployees]);
+
+  function handleSearchSubmit() {
+    const nextSearch =
+      search.trim();
+
+    setAppliedSearch(nextSearch);
+
+    if (page !== 1) {
+      setPage(1);
     }
   }
-
-  const filteredItems =
-    useMemo(() => {
-      const query =
-        search
-          .trim()
-          .toLowerCase();
-
-      if (!query) {
-        return items;
-      }
-
-      return items.filter(
-        (item) => {
-          const fullName = [
-            item.firstName,
-            item.lastName,
-          ]
-            .filter(Boolean)
-            .join(' ')
-            .toLowerCase();
-
-          return (
-            fullName.includes(query) ||
-            item.employeeNumber
-              .toLowerCase()
-              .includes(query) ||
-            item.email
-              .toLowerCase()
-              .includes(query) ||
-            item.department?.name
-              ?.toLowerCase()
-              .includes(query) ||
-            item.position
-              ?.toLowerCase()
-              .includes(query)
-          );
-        },
-      );
-    }, [
-      items,
-      search,
-    ]);
 
   function openCreateModal() {
     setSelectedEmployee(null);
@@ -539,9 +604,71 @@ export default function EmployeePage() {
                   event.target.value,
                 )
               }
+              onKeyDown={(event) => {
+                if (event.key === 'Enter') {
+                  handleSearchSubmit();
+                }
+              }}
               placeholder="Search employee, ID, email, department..."
             />
           </div>
+
+          <button
+            type="button"
+            className="ghost-button button-with-icon"
+            onClick={handleSearchSubmit}
+          >
+            <Search size={15} />
+            Search
+          </button>
+
+          <select
+            className="attendance-filter"
+            value={statusFilter}
+            onChange={(event) => {
+              setPage(1);
+              setStatusFilter(
+                event.target.value as
+                  | 'all'
+                  | EmployeeStatus,
+              );
+            }}
+          >
+            <option value="all">
+              All Status
+            </option>
+            <option value="active">
+              Active
+            </option>
+            <option value="inactive">
+              Inactive
+            </option>
+          </select>
+
+          <select
+            className="attendance-filter"
+            value={departmentFilter}
+            onChange={(event) => {
+              setPage(1);
+              setDepartmentFilter(
+                event.target.value,
+              );
+            }}
+          >
+            <option value="all">
+              All Departments
+            </option>
+            {departments.map(
+              (department) => (
+                <option
+                  key={department.id}
+                  value={department.id}
+                >
+                  {department.name}
+                </option>
+              ),
+            )}
+          </select>
 
           <button
             type="button"
@@ -575,9 +702,7 @@ export default function EmployeePage() {
             </div>
           ) : (
             <EmployeeTable
-              items={
-                filteredItems
-              }
+              items={items}
               onEdit={
                 openEditModal
               }
@@ -595,6 +720,80 @@ export default function EmployeePage() {
               }
             />
           )}
+
+          <div className="pagination-bar">
+            <div className="pagination-info">
+              <span>
+                Total {pagination.total}
+                {' employees'}
+              </span>
+              <span>
+                Page {pagination.page}
+                {' of '}
+                {Math.max(
+                  pagination.totalPages,
+                  1,
+                )}
+              </span>
+            </div>
+
+            <div className="pagination-actions">
+              <select
+                className="attendance-filter"
+                value={limit}
+                onChange={(event) => {
+                  setLimit(
+                    Number(
+                      event.target.value,
+                    ),
+                  );
+                  setPage(1);
+                }}
+              >
+                <option value={10}>
+                  10 / page
+                </option>
+                <option value={25}>
+                  25 / page
+                </option>
+                <option value={50}>
+                  50 / page
+                </option>
+              </select>
+
+              <button
+                type="button"
+                className="ghost-button"
+                disabled={
+                  !pagination.hasPreviousPage ||
+                  isLoading
+                }
+                onClick={() =>
+                  setPage((current) =>
+                    Math.max(1, current - 1),
+                  )
+                }
+              >
+                Previous
+              </button>
+
+              <button
+                type="button"
+                className="ghost-button"
+                disabled={
+                  !pagination.hasNextPage ||
+                  isLoading
+                }
+                onClick={() =>
+                  setPage((current) =>
+                    current + 1,
+                  )
+                }
+              >
+                Next
+              </button>
+            </div>
+          </div>
         </div>
       </section>
 

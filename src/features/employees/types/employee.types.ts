@@ -71,6 +71,29 @@ export interface EmployeeListResponse {
   success: boolean;
   message: string;
   data: Employee[];
+  meta?: EmployeePaginationMeta;
+}
+
+export interface EmployeePaginationMeta {
+  page: number;
+  limit: number;
+  total: number;
+  totalPages: number;
+  hasNextPage: boolean;
+  hasPreviousPage: boolean;
+}
+
+export interface EmployeeQueryParams {
+  page?: number;
+  limit?: number;
+  search?: string;
+  status?: EmployeeStatus;
+  departmentId?: string;
+}
+
+export interface EmployeePaginatedResult {
+  data: Employee[];
+  meta: EmployeePaginationMeta;
 }
 
 export interface EmployeeResponse {

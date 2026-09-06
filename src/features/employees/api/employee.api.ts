@@ -5,10 +5,52 @@ import type {
   EmployeeAccountResponse,
   EmployeeAccountStatusResponse,
   EmployeeListResponse,
+  EmployeePaginatedResult,
+  EmployeeQueryParams,
   EmployeeResponse,
   EmployeeStatus,
   UpdateEmployeePayload,
 } from '../types/employee.types';
+
+export async function getEmployeesPaginated(
+  params: EmployeeQueryParams,
+): Promise<EmployeePaginatedResult> {
+  const response =
+    await api.get<EmployeeListResponse>(
+      '/employees',
+      {
+        params,
+      },
+    );
+
+  const data =
+    response.data.data;
+
+  const meta =
+    response.data.meta;
+
+  if (!meta) {
+    return {
+      data,
+      meta: {
+        page: 1,
+        limit: data.length,
+        total: data.length,
+        totalPages:
+          data.length > 0
+            ? 1
+            : 0,
+        hasNextPage: false,
+        hasPreviousPage: false,
+      },
+    };
+  }
+
+  return {
+    data,
+    meta,
+  };
+}
 
 export async function getEmployees() {
   const response =

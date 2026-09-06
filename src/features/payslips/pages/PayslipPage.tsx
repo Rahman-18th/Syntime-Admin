@@ -1,6 +1,6 @@
 import {
+  useCallback,
   useEffect,
-  useMemo,
   useState,
 } from 'react';
 
@@ -25,7 +25,7 @@ import type {
 
 import {
   createPayslip,
-  getPayslips,
+  getPayslipsPaginated,
   updatePayslip,
 } from '../api/payslip.api';
 
@@ -41,6 +41,7 @@ import PayslipTable
 import type {
   CreatePayslipPayload,
   Payslip,
+  PayslipPaginationMeta,
   UpdatePayslipPayload,
 } from '../types/payslip.types';
 
@@ -65,6 +66,31 @@ export default function PayslipPage() {
 
   const [search, setSearch] =
     useState('');
+
+  const [appliedSearch, setAppliedSearch] =
+    useState('');
+
+  const [page, setPage] =
+    useState(1);
+
+  const [limit, setLimit] =
+    useState(10);
+
+  const [pagination, setPagination] =
+    useState<PayslipPaginationMeta>({
+      page: 1,
+      limit: 10,
+      total: 0,
+      totalPages: 0,
+      hasNextPage: false,
+      hasPreviousPage: false,
+      summary: {
+        totalRecords: 0,
+        published: 0,
+        draft: 0,
+        totalTakeHomePay: 0,
+      },
+    });
 
   const [
     statusFilter,
@@ -111,26 +137,22 @@ export default function PayslipPage() {
   const [modalOpen, setModalOpen] =
     useState(false);
 
-  useEffect(() => {
-    void loadData();
-  }, []);
-
-  async function loadData() {
+  const loadPayslips = useCallback(async () => {
     setIsLoading(true);
     setError(null);
 
     try {
-      const [
-        payslipData,
-        employeeData,
-      ] =
-        await Promise.all([
-          getPayslips(),
-          getEmployees(),
-        ]);
+      const result = await getPayslipsPaginated({
+        page,
+        limit,
+        ...(appliedSearch && { search: appliedSearch }),
+        ...(statusFilter !== 'all' && { status: statusFilter }),
+        ...(monthFilter !== 'all' && { month: Number(monthFilter) }),
+        ...(yearFilter !== 'all' && { year: Number(yearFilter) }),
+      });
 
-      setItems(payslipData);
-      setEmployees(employeeData);
+      setItems(result.data);
+      setPagination(result.meta);
     } catch (error) {
       setError(
         getErrorMessage(
@@ -141,71 +163,65 @@ export default function PayslipPage() {
     } finally {
       setIsLoading(false);
     }
+  }, [
+    page,
+    limit,
+    appliedSearch,
+    statusFilter,
+    monthFilter,
+    yearFilter,
+  ]);
+
+  const loadEmployees = useCallback(async () => {
+    try {
+      const employeeData = await getEmployees();
+      setEmployees(employeeData);
+    } catch (error) {
+      showToast({
+        type: 'error',
+        title: 'Employee load failed',
+        message: getErrorMessage(
+          error,
+          'Failed to load employees.',
+        ),
+      });
+    }
+  }, [showToast]);
+
+  useEffect(() => {
+    const timeoutId = window.setTimeout(() => {
+      void loadEmployees();
+    }, 0);
+
+    return () => window.clearTimeout(timeoutId);
+  }, [loadEmployees]);
+
+  useEffect(() => {
+    const timeoutId = window.setTimeout(() => {
+      void loadPayslips();
+    }, 0);
+
+    return () => window.clearTimeout(timeoutId);
+  }, [loadPayslips]);
+
+  function handleSearchSubmit() {
+    const nextSearch = search.trim();
+
+    if (page === 1 && nextSearch === appliedSearch) {
+      void loadPayslips();
+      return;
+    }
+
+    setPage(1);
+    setAppliedSearch(nextSearch);
   }
 
-  const filteredItems =
-    useMemo(() => {
-      const query =
-        search
-          .trim()
-          .toLowerCase();
-
-      return items.filter(
-        (item) => {
-          const fullName = [
-            item.employee.firstName,
-            item.employee.lastName,
-          ]
-            .filter(Boolean)
-            .join(' ')
-            .toLowerCase();
-
-          const matchesSearch =
-            !query ||
-            fullName.includes(query) ||
-            item.employee.employeeNumber
-              .toLowerCase()
-              .includes(query);
-
-          const matchesStatus =
-            statusFilter === 'all' ||
-            item.status ===
-              statusFilter;
-
-          const matchesMonth =
-            monthFilter === 'all' ||
-            item.periodMonth ===
-              Number(monthFilter);
-
-          const matchesYear =
-            yearFilter === 'all' ||
-            item.periodYear ===
-              Number(yearFilter);
-
-          return (
-            matchesSearch &&
-            matchesStatus &&
-            matchesMonth &&
-            matchesYear
-          );
-        },
-      );
-    }, [
-      items,
-      search,
-      statusFilter,
-      monthFilter,
-      yearFilter,
-    ]);
+  const currentYear = new Date().getFullYear();
 
   const years =
     Array.from(
-      new Set(
-        items.map(
-          (item) =>
-            item.periodYear,
-        ),
-      ),
+      { length: 11 },
+      (_, index) => currentYear - 5 + index,
     ).sort(
       (a, b) => b - a,
     );
@@ -250,7 +266,7 @@ export default function PayslipPage() {
       setModalOpen(false);
       setSelectedPayslip(null);
 
-      await loadData();
+      await loadPayslips();
 
       showToast({
         type: 'success',
@@ -275,29 +291,12 @@ export default function PayslipPage() {
     }
   }
 
-  const publishedCount =
-    items.filter(
-      (item) =>
-        item.status ===
-        'published',
-    ).length;
-
-  const draftCount =
-    items.filter(
-      (item) =>
-        item.status ===
-        'draft',
-    ).length;
-
-  const totalPayroll =
-    items.reduce(
-      (total, item) =>
-        total +
-        Number(
-          item.takeHomePay,
-        ),
-      0,
-    );
+  const {
+    totalRecords,
+    published,
+    draft,
+    totalTakeHomePay,
+  } = pagination.summary;
 
   return (
     <div className="page-stack">
@@ -331,7 +330,7 @@ export default function PayslipPage() {
       <section className="attendance-stat-grid">
         <PayrollStat
           label="Total Records"
-          value={items.length}
+          value={totalRecords}
           icon={
             <Banknote size={18} />
           }
@@ -339,7 +338,7 @@ export default function PayslipPage() {
 
         <PayrollStat
           label="Published"
-          value={publishedCount}
+          value={published}
           icon={
             <FileCheck2 size={18} />
           }
@@ -347,7 +346,7 @@ export default function PayslipPage() {
 
         <PayrollStat
           label="Draft"
-          value={draftCount}
+          value={draft}
           icon={
             <FileClock size={18} />
           }
@@ -361,7 +360,7 @@ export default function PayslipPage() {
 
             <strong className="payroll-total">
               {formatCurrency(
-                totalPayroll,
+                totalTakeHomePay,
               )}
             </strong>
           </div>
@@ -395,19 +394,33 @@ export default function PayslipPage() {
                   event.target.value,
                 )
               }
+              onKeyDown={(event) => {
+                if (event.key === 'Enter') {
+                  handleSearchSubmit();
+                }
+              }}
               placeholder="Search employee..."
             />
           </div>
 
+          <button
+            type="button"
+            className="ghost-button button-with-icon"
+            onClick={handleSearchSubmit}
+          >
+            <Search size={15} />
+            Search
+          </button>
+
           <select
             className="attendance-filter"
             value={statusFilter}
-            onChange={(event) =>
+            onChange={(event) => {
+              setPage(1);
               setStatusFilter(
-                event.target
-                  .value as StatusFilter,
-              )
-            }
+                event.target.value as StatusFilter,
+              );
+            }}
           >
             <option value="all">
               All Status
@@ -423,11 +436,10 @@ export default function PayslipPage() {
           <select
             className="attendance-filter"
             value={monthFilter}
-            onChange={(event) =>
-              setMonthFilter(
-                event.target.value,
-              )
-            }
+            onChange={(event) => {
+              setPage(1);
+              setMonthFilter(event.target.value);
+            }}
           >
             <option value="all">
               All Months
@@ -460,11 +472,10 @@ export default function PayslipPage() {
           <select
             className="attendance-filter"
             value={yearFilter}
-            onChange={(event) =>
-              setYearFilter(
-                event.target.value,
-              )
-            }
+            onChange={(event) => {
+              setPage(1);
+              setYearFilter(event.target.value);
+            }}
           >
             <option value="all">
               All Years
@@ -485,7 +496,7 @@ export default function PayslipPage() {
           <button
             type="button"
             className="ghost-button button-with-icon"
-            onClick={loadData}
+            onClick={() => void loadPayslips()}
             disabled={isLoading}
           >
             <RefreshCw
@@ -512,13 +523,58 @@ export default function PayslipPage() {
             </div>
           ) : (
             <PayslipTable
-              items={filteredItems}
+              items={items}
               onView={
                 setDetailPayslip
               }
               onEdit={openEdit}
             />
           )}
+        </div>
+
+        <div className="pagination-bar">
+          <div className="pagination-info">
+            <span>
+              Total {pagination.total} payslips
+            </span>
+
+            <span>
+              Page {pagination.page} of {Math.max(pagination.totalPages, 1)}
+            </span>
+          </div>
+
+          <div className="pagination-actions">
+            <select
+              className="attendance-filter"
+              value={limit}
+              onChange={(event) => {
+                setLimit(Number(event.target.value));
+                setPage(1);
+              }}
+            >
+              <option value={10}>10 / page</option>
+              <option value={25}>25 / page</option>
+              <option value={50}>50 / page</option>
+            </select>
+
+            <button
+              type="button"
+              className="ghost-button"
+              disabled={!pagination.hasPreviousPage || isLoading}
+              onClick={() => setPage((current) => Math.max(1, current - 1))}
+            >
+              Previous
+            </button>
+
+            <button
+              type="button"
+              className="ghost-button"
+              disabled={!pagination.hasNextPage || isLoading}
+              onClick={() => setPage((current) => current + 1)}
+            >
+              Next
+            </button>
+          </div>
         </div>
       </section>
 

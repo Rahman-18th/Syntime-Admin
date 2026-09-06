@@ -18,6 +18,7 @@ import MasterDataPage from '../features/master-data/pages/MasterDataPage';
 import NotificationPage from '../features/notifications/pages/NotificationPage';
 import RbacPage from '../features/rbac/pages/RbacPage';
 import SettingsPage from '../features/settings/pages/SettingsPage';
+import AuditLogPage from '../features/audit-logs/pages/AuditLogPage';
 
 
 
@@ -96,6 +97,11 @@ export default function AppRouter() {
             <Route
               path="/access-control"
               element={<RbacPage />}
+            />
+
+            <Route
+              path="/audit-logs"
+              element={<AuditLogPage />}
             />
           </Route>
           

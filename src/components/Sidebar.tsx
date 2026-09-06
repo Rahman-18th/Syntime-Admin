@@ -3,13 +3,19 @@ import {
   Building2,
   ClipboardList,
   Clock3,
+  History,
   LayoutDashboard,
   LogOut,
   Megaphone,
   ReceiptText,
   Settings,
+  ShieldCheck,
   UserRound,
 } from 'lucide-react';
+
+import type {
+  ComponentType,
+} from 'react';
 
 import {
   NavLink,
@@ -62,6 +68,25 @@ const communicationMenu = [
   },
 ];
 
+const securityMenu = [
+  {
+    label: 'Access Control',
+    path: '/access-control',
+    icon: ShieldCheck,
+  },
+  {
+    label: 'Audit Logs',
+    path: '/audit-logs',
+    icon: History,
+  },
+];
+
+type MenuItem = {
+  label: string;
+  path: string;
+  icon: ComponentType<{ size?: number }>;
+};
+
 export default function Sidebar() {
   const navigate = useNavigate();
 
@@ -80,7 +105,7 @@ export default function Sidebar() {
   }
 
   function renderMenu(
-    items: typeof mainMenu,
+    items: MenuItem[],
   ) {
     return items.map((item) => {
       const Icon = item.icon;
@@ -144,6 +169,16 @@ export default function Sidebar() {
           {renderMenu(
             communicationMenu,
           )}
+        </nav>
+      </div>
+
+      <div className="sidebar-section">
+        <div className="sidebar-section-label">
+          Security
+        </div>
+
+        <nav className="sidebar-nav">
+          {renderMenu(securityMenu)}
         </nav>
       </div>
 

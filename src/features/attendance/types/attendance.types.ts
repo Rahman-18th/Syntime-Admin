@@ -69,4 +69,35 @@ export interface AttendanceListResponse {
   success: boolean;
   message: string;
   data: Attendance[];
+  meta?: AttendancePaginationMeta;
+}
+
+export interface AttendanceSummary {
+  totalRecords: number;
+  present: number;
+  late: number;
+  incomplete: number;
+}
+
+export interface AttendancePaginationMeta {
+  page: number;
+  limit: number;
+  total: number;
+  totalPages: number;
+  hasNextPage: boolean;
+  hasPreviousPage: boolean;
+  summary: AttendanceSummary;
+}
+
+export interface AttendanceQueryParams {
+  page?: number;
+  limit?: number;
+  search?: string;
+  status?: 'present' | 'late';
+  date?: string;
+}
+
+export interface AttendancePaginatedResult {
+  data: Attendance[];
+  meta: AttendancePaginationMeta;
 }

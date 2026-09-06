@@ -1,6 +1,6 @@
 import {
+  useCallback,
   useEffect,
-  useMemo,
   useState,
 } from 'react';
 
@@ -14,7 +14,9 @@ import {
   UserCheck,
 } from 'lucide-react';
 
-import { getAttendances } from '../api/attendances.api';
+import {
+  getAttendancesPaginated,
+} from '../api/attendances.api';
 
 import AttendanceDetailModal
   from '../components/AttendanceDetailModel';
@@ -24,6 +26,7 @@ import AttendanceTable
 
 import type {
   Attendance,
+  AttendancePaginationMeta,
 } from '../types/attendance.types';
 
 type StatusFilter =
@@ -37,6 +40,35 @@ export default function AttendancePage() {
 
   const [search, setSearch] =
     useState('');
+
+  const [page, setPage] =
+    useState(1);
+
+  const [limit, setLimit] =
+    useState(10);
+
+  const [
+    appliedSearch,
+    setAppliedSearch,
+  ] = useState('');
+
+  const [
+    pagination,
+    setPagination,
+  ] = useState<AttendancePaginationMeta>({
+    page: 1,
+    limit: 10,
+    total: 0,
+    totalPages: 0,
+    hasNextPage: false,
+    hasPreviousPage: false,
+    summary: {
+      totalRecords: 0,
+      present: 0,
+      late: 0,
+      incomplete: 0,
+    },
+  });
 
   const [
     statusFilter,
@@ -66,19 +98,28 @@ export default function AttendancePage() {
       null,
     );
 
-  useEffect(() => {
-    void loadAttendances();
-  }, []);
-
-  async function loadAttendances() {
+  const loadAttendances = useCallback(async () => {
     setIsLoading(true);
     setError(null);
 
     try {
-      const data =
-        await getAttendances();
+      const result =
+        await getAttendancesPaginated({
+          page,
+          limit,
+          ...(appliedSearch && {
+            search: appliedSearch,
+          }),
+          ...(statusFilter !== 'all' && {
+            status: statusFilter,
+          }),
+          ...(dateFilter && {
+            date: dateFilter,
+          }),
+        });
 
-      setItems(data);
+      setItems(result.data);
+      setPagination(result.meta);
     } catch (error) {
       setError(
         getErrorMessage(
@@ -89,83 +130,38 @@ export default function AttendancePage() {
     } finally {
       setIsLoading(false);
     }
+  }, [
+    page,
+    limit,
+    appliedSearch,
+    statusFilter,
+    dateFilter,
+  ]);
+
+  useEffect(() => {
+    const timeoutId =
+      window.setTimeout(() => {
+        void loadAttendances();
+      }, 0);
+
+    return () =>
+      window.clearTimeout(timeoutId);
+  }, [loadAttendances]);
+
+  function handleSearchSubmit() {
+    const nextSearch = search.trim();
+
+    if (
+      page === 1 &&
+      nextSearch === appliedSearch
+    ) {
+      void loadAttendances();
+      return;
+    }
+
+    setPage(1);
+    setAppliedSearch(nextSearch);
   }
-
-  const filteredItems =
-    useMemo(() => {
-      const query =
-        search
-          .trim()
-          .toLowerCase();
-
-      return items.filter(
-        (item) => {
-          const employee =
-            item.schedule.employee;
-
-          const fullName = [
-            employee.firstName,
-            employee.lastName,
-          ]
-            .filter(Boolean)
-            .join(' ')
-            .toLowerCase();
-
-          const matchesSearch =
-            !query ||
-            fullName.includes(query) ||
-            employee.employeeNumber
-              .toLowerCase()
-              .includes(query) ||
-            employee.email
-              .toLowerCase()
-              .includes(query);
-
-          const matchesStatus =
-            statusFilter === 'all' ||
-            item.status ===
-              statusFilter;
-
-          const workDate =
-            item.schedule.workDate
-              .slice(0, 10);
-
-          const matchesDate =
-            !dateFilter ||
-            workDate === dateFilter;
-
-          return (
-            matchesSearch &&
-            matchesStatus &&
-            matchesDate
-          );
-        },
-      );
-    }, [
-      items,
-      search,
-      statusFilter,
-      dateFilter,
-    ]);
-
-  const presentCount =
-    items.filter(
-      (item) =>
-        item.status ===
-        'present',
-    ).length;
-
-  const lateCount =
-    items.filter(
-      (item) =>
-        item.status === 'late',
-    ).length;
-
-  const incompleteCount =
-    items.filter(
-      (item) =>
-        item.checkOutAt == null,
-    ).length;
 
   return (
     <div className="page-stack">
@@ -189,8 +185,8 @@ export default function AttendancePage() {
         <button
           type="button"
           className="ghost-button button-with-icon"
-          onClick={
-            loadAttendances
+          onClick={() =>
+            void loadAttendances()
           }
           disabled={isLoading}
         >
@@ -210,7 +206,9 @@ export default function AttendancePage() {
       <section className="attendance-stat-grid">
         <AttendanceStat
           label="Total Records"
-          value={items.length}
+          value={
+            pagination.summary.totalRecords
+          }
           icon={
             <CalendarDays
               size={18}
@@ -220,7 +218,7 @@ export default function AttendancePage() {
 
         <AttendanceStat
           label="Present"
-          value={presentCount}
+          value={pagination.summary.present}
           icon={
             <UserCheck
               size={18}
@@ -231,7 +229,7 @@ export default function AttendancePage() {
 
         <AttendanceStat
           label="Late"
-          value={lateCount}
+          value={pagination.summary.late}
           icon={
             <Clock3
               size={18}
@@ -242,7 +240,9 @@ export default function AttendancePage() {
 
         <AttendanceStat
           label="Incomplete"
-          value={incompleteCount}
+          value={
+            pagination.summary.incomplete
+          }
           tone="neutral"
         />
       </section>
@@ -274,19 +274,35 @@ export default function AttendancePage() {
                   event.target.value,
                 )
               }
+              onKeyDown={(event) => {
+                if (event.key === 'Enter') {
+                  handleSearchSubmit();
+                }
+              }}
               placeholder="Search employee..."
             />
           </div>
 
+          <button
+            type="button"
+            className="ghost-button button-with-icon"
+            onClick={handleSearchSubmit}
+          >
+            <Search size={15} />
+            Search
+          </button>
+
           <select
             className="attendance-filter"
             value={statusFilter}
-            onChange={(event) =>
+            onChange={(event) => {
+              setPage(1);
+
               setStatusFilter(
                 event.target
                   .value as StatusFilter,
-              )
-            }
+              );
+            }}
           >
             <option value="all">
               All Status
@@ -305,11 +321,13 @@ export default function AttendancePage() {
             type="date"
             className="attendance-filter"
             value={dateFilter}
-            onChange={(event) =>
+            onChange={(event) => {
+              setPage(1);
+
               setDateFilter(
                 event.target.value,
-              )
-            }
+              );
+            }}
           />
         </div>
 
@@ -324,14 +342,77 @@ export default function AttendancePage() {
             </div>
           ) : (
             <AttendanceTable
-              items={
-                filteredItems
-              }
+              items={items}
               onView={
                 setSelectedAttendance
               }
             />
           )}
+        </div>
+
+        <div className="pagination-bar">
+          <div className="pagination-info">
+            <span>
+              Total {pagination.total}
+              {' records'}
+            </span>
+
+            <span>
+              Page {pagination.page}
+              {' of '}
+              {Math.max(
+                pagination.totalPages,
+                1,
+              )}
+            </span>
+          </div>
+
+          <div className="pagination-actions">
+            <select
+              className="attendance-filter"
+              value={limit}
+              onChange={(event) => {
+                setLimit(
+                  Number(event.target.value),
+                );
+                setPage(1);
+              }}
+            >
+              <option value={10}>10 / page</option>
+              <option value={25}>25 / page</option>
+              <option value={50}>50 / page</option>
+            </select>
+
+            <button
+              type="button"
+              className="ghost-button"
+              disabled={
+                !pagination.hasPreviousPage ||
+                isLoading
+              }
+              onClick={() =>
+                setPage((current) =>
+                  Math.max(1, current - 1),
+                )
+              }
+            >
+              Previous
+            </button>
+
+            <button
+              type="button"
+              className="ghost-button"
+              disabled={
+                !pagination.hasNextPage ||
+                isLoading
+              }
+              onClick={() =>
+                setPage((current) => current + 1)
+              }
+            >
+              Next
+            </button>
+          </div>
         </div>
       </section>
 

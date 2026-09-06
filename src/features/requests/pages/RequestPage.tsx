@@ -1,6 +1,6 @@
 import {
+  useCallback,
   useEffect,
-  useMemo,
   useState,
 } from 'react';
 
@@ -15,7 +15,7 @@ import {
 } from 'lucide-react';
 
 import {
-  getRequests,
+  getRequestsPaginated,
   reviewRequest,
 } from '../api/request.api';
 
@@ -27,6 +27,7 @@ import RequestTable
 
 import type {
   EmployeeRequest,
+  RequestPaginationMeta,
   ReviewRequestPayload,
 } from '../types/request.types';
 
@@ -55,6 +56,31 @@ export default function RequestPage() {
 
   const [search, setSearch] =
     useState('');
+
+  const [page, setPage] =
+    useState(1);
+
+  const [limit, setLimit] =
+    useState(10);
+
+  const [appliedSearch, setAppliedSearch] =
+    useState('');
+
+  const [pagination, setPagination] =
+    useState<RequestPaginationMeta>({
+      page: 1,
+      limit: 10,
+      total: 0,
+      totalPages: 0,
+      hasNextPage: false,
+      hasPreviousPage: false,
+      summary: {
+        totalRequests: 0,
+        pending: 0,
+        approved: 0,
+        rejected: 0,
+      },
+    });
 
   const [
     statusFilter,
@@ -92,19 +118,21 @@ export default function RequestPage() {
       null,
     );
 
-  useEffect(() => {
-    void loadRequests();
-  }, []);
-
-  async function loadRequests() {
+  const loadRequests = useCallback(async () => {
     setIsLoading(true);
     setError(null);
 
     try {
-      const data =
-        await getRequests();
+      const result = await getRequestsPaginated({
+        page,
+        limit,
+        ...(appliedSearch && { search: appliedSearch }),
+        ...(statusFilter !== 'all' && { status: statusFilter }),
+        ...(typeFilter !== 'all' && { type: typeFilter }),
+      });
 
-      setItems(data);
+      setItems(result.data);
+      setPagination(result.meta);
     } catch (error) {
       setError(
         getErrorMessage(
@@ -115,59 +143,33 @@ export default function RequestPage() {
     } finally {
       setIsLoading(false);
     }
+  }, [
+    page,
+    limit,
+    appliedSearch,
+    statusFilter,
+    typeFilter,
+  ]);
+
+  useEffect(() => {
+    const timeoutId = window.setTimeout(() => {
+      void loadRequests();
+    }, 0);
+
+    return () => window.clearTimeout(timeoutId);
+  }, [loadRequests]);
+
+  function handleSearchSubmit() {
+    const nextSearch = search.trim();
+
+    if (page === 1 && nextSearch === appliedSearch) {
+      void loadRequests();
+      return;
+    }
+
+    setPage(1);
+    setAppliedSearch(nextSearch);
   }
-
-  const filteredItems =
-    useMemo(() => {
-      const query =
-        search
-          .trim()
-          .toLowerCase();
-
-      return items.filter(
-        (item) => {
-          const fullName = [
-            item.employee.firstName,
-            item.employee.lastName,
-          ]
-            .filter(Boolean)
-            .join(' ')
-            .toLowerCase();
-
-          const matchesSearch =
-            !query ||
-            fullName.includes(query) ||
-            item.employee
-              .employeeNumber
-              .toLowerCase()
-              .includes(query) ||
-            item.employee.email
-              .toLowerCase()
-              .includes(query);
-
-          const matchesStatus =
-            statusFilter === 'all' ||
-            item.status ===
-              statusFilter;
-
-          const matchesType =
-            typeFilter === 'all' ||
-            item.type ===
-              typeFilter;
-
-          return (
-            matchesSearch &&
-            matchesStatus &&
-            matchesType
-          );
-        },
-      );
-    }, [
-      items,
-      search,
-      statusFilter,
-      typeFilter,
-    ]);
 
   async function handleReview(
     payload: ReviewRequestPayload,
@@ -227,23 +229,12 @@ export default function RequestPage() {
     }
   }
 
-  const pendingCount =
-    items.filter(
-      (item) =>
-        item.status === 'pending',
-    ).length;
-
-  const approvedCount =
-    items.filter(
-      (item) =>
-        item.status === 'approved',
-    ).length;
-
-  const rejectedCount =
-    items.filter(
-      (item) =>
-        item.status === 'rejected',
-    ).length;
+  const {
+    totalRequests,
+    pending,
+    approved,
+    rejected,
+  } = pagination.summary;
 
   return (
     <div className="page-stack">
@@ -267,7 +258,7 @@ export default function RequestPage() {
         <button
           type="button"
           className="ghost-button button-with-icon"
-          onClick={loadRequests}
+          onClick={() => void loadRequests()}
           disabled={isLoading}
         >
           <RefreshCw
@@ -286,19 +277,19 @@ export default function RequestPage() {
       <section className="attendance-stat-grid">
         <RequestStat
           label="Total Requests"
-          value={items.length}
+          value={totalRequests}
         />
 
         <RequestStat
           label="Pending"
-          value={pendingCount}
+          value={pending}
           icon={<Clock3 size={18} />}
           tone="warning"
         />
 
         <RequestStat
           label="Approved"
-          value={approvedCount}
+          value={approved}
           icon={
             <CheckCircle2
               size={18}
@@ -309,7 +300,7 @@ export default function RequestPage() {
 
         <RequestStat
           label="Rejected"
-          value={rejectedCount}
+          value={rejected}
           icon={
             <XCircle size={18} />
           }
@@ -344,19 +335,33 @@ export default function RequestPage() {
                   event.target.value,
                 )
               }
+              onKeyDown={(event) => {
+                if (event.key === 'Enter') {
+                  handleSearchSubmit();
+                }
+              }}
               placeholder="Search employee..."
             />
           </div>
 
+          <button
+            type="button"
+            className="ghost-button button-with-icon"
+            onClick={handleSearchSubmit}
+          >
+            <Search size={15} />
+            Search
+          </button>
+
           <select
             className="attendance-filter"
             value={statusFilter}
-            onChange={(event) =>
+            onChange={(event) => {
+              setPage(1);
               setStatusFilter(
-                event.target
-                  .value as StatusFilter,
-              )
-            }
+                event.target.value as StatusFilter,
+              );
+            }}
           >
             <option value="all">
               All Status
@@ -378,12 +383,12 @@ export default function RequestPage() {
           <select
             className="attendance-filter"
             value={typeFilter}
-            onChange={(event) =>
+            onChange={(event) => {
+              setPage(1);
               setTypeFilter(
-                event.target
-                  .value as TypeFilter,
-              )
-            }
+                event.target.value as TypeFilter,
+              );
+            }}
           >
             <option value="all">
               All Types
@@ -414,14 +419,57 @@ export default function RequestPage() {
             </div>
           ) : (
             <RequestTable
-              items={
-                filteredItems
-              }
+              items={items}
               onView={
                 setSelectedRequest
               }
             />
           )}
+        </div>
+
+        <div className="pagination-bar">
+          <div className="pagination-info">
+            <span>
+              Total {pagination.total} requests
+            </span>
+
+            <span>
+              Page {pagination.page} of {Math.max(pagination.totalPages, 1)}
+            </span>
+          </div>
+
+          <div className="pagination-actions">
+            <select
+              className="attendance-filter"
+              value={limit}
+              onChange={(event) => {
+                setLimit(Number(event.target.value));
+                setPage(1);
+              }}
+            >
+              <option value={10}>10 / page</option>
+              <option value={25}>25 / page</option>
+              <option value={50}>50 / page</option>
+            </select>
+
+            <button
+              type="button"
+              className="ghost-button"
+              disabled={!pagination.hasPreviousPage || isLoading}
+              onClick={() => setPage((current) => Math.max(1, current - 1))}
+            >
+              Previous
+            </button>
+
+            <button
+              type="button"
+              className="ghost-button"
+              disabled={!pagination.hasNextPage || isLoading}
+              onClick={() => setPage((current) => current + 1)}
+            >
+              Next
+            </button>
+          </div>
         </div>
       </section>
 

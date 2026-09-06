@@ -65,10 +65,41 @@ export interface EmployeeRequest {
   attachments: RequestAttachment[];
 }
 
+export interface RequestSummary {
+  totalRequests: number;
+  pending: number;
+  approved: number;
+  rejected: number;
+}
+
+export interface RequestPaginationMeta {
+  page: number;
+  limit: number;
+  total: number;
+  totalPages: number;
+  hasNextPage: boolean;
+  hasPreviousPage: boolean;
+  summary: RequestSummary;
+}
+
+export interface RequestQueryParams {
+  page?: number;
+  limit?: number;
+  search?: string;
+  status?: RequestStatus;
+  type?: RequestType;
+}
+
+export interface RequestPaginatedResult {
+  data: EmployeeRequest[];
+  meta: RequestPaginationMeta;
+}
+
 export interface RequestListResponse {
   success: boolean;
   message: string;
   data: EmployeeRequest[];
+  meta?: RequestPaginationMeta;
 }
 
 export interface RequestResponse {

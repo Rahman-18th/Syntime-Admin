@@ -107,12 +107,12 @@ export default function AttendanceTable({
                     </strong>
 
                     <span>
-                      {formatTime(
+                      {formatShiftTime(
                         item.schedule
                           .shift.startTime,
                       )}
                       {' - '}
-                      {formatTime(
+                      {formatShiftTime(
                         item.schedule
                           .shift.endTime,
                       )}
@@ -217,16 +217,23 @@ function formatClock(
   );
 }
 
-function formatTime(
+function formatShiftTime(
   value: string,
 ) {
-  return new Intl.DateTimeFormat(
-    'en-ID',
-    {
-      hour: '2-digit',
-      minute: '2-digit',
-    },
-  ).format(
-    new Date(value),
-  );
+  const date =
+    new Date(value);
+
+  const hours =
+    date
+      .getUTCHours()
+      .toString()
+      .padStart(2, '0');
+
+  const minutes =
+    date
+      .getUTCMinutes()
+      .toString()
+      .padStart(2, '0');
+
+  return `${hours}:${minutes}`;
 }

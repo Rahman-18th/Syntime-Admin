@@ -46,7 +46,13 @@ import type {
   SchedulePayload,
 } from '../types/schedule.types';
 
+import {
+  useToast,
+} from '../../../components/toast/useToast';
+
 export default function SchedulePage() {
+    const { showToast } =
+  useToast();
   const [
     schedules,
     setSchedules,
@@ -236,18 +242,24 @@ export default function SchedulePage() {
 
       await loadData();
 
-      window.alert(
-        isEditing
-          ? 'Schedule updated successfully.'
-          : 'Schedule created successfully.',
-      );
+      showToast({
+        type: 'success',
+        title: isEditing
+          ? 'Schedule updated'
+          : 'Schedule created',
+        message: isEditing
+          ? 'Schedule information was updated successfully.'
+          : 'New schedule was created successfully.',
+      });
     } catch (error) {
-      setError(
-        getErrorMessage(
+      showToast({
+        type: 'error',
+        title: 'Schedule save failed',
+        message: getErrorMessage(
           error,
           'Failed to save schedule.',
         ),
-      );
+      });
     } finally {
       setIsSubmitting(false);
     }

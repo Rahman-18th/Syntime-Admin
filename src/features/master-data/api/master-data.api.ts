@@ -10,6 +10,9 @@ import type {
   OfficeListResponse,
   OfficePayload,
   OfficeResponse,
+  ShiftListResponse,
+  ShiftPayload,
+  ShiftResponse,
 } from '../types/master-data.types';
 
 export async function getCompanies() {
@@ -126,6 +129,40 @@ export async function updateOffice(
   const response =
     await api.put<OfficeResponse>(
       `/offices/${id}`,
+      payload,
+    );
+
+  return response.data.data;
+}
+
+export async function getShifts() {
+  const response =
+    await api.get<ShiftListResponse>(
+      '/shifts',
+    );
+
+  return response.data.data;
+}
+
+export async function createShift(
+  payload: ShiftPayload,
+) {
+  const response =
+    await api.post<ShiftResponse>(
+      '/shifts',
+      payload,
+    );
+
+  return response.data.data;
+}
+
+export async function updateShift(
+  id: string,
+  payload: ShiftPayload,
+) {
+  const response =
+    await api.put<ShiftResponse>(
+      `/shifts/${id}`,
       payload,
     );
 

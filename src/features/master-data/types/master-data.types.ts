@@ -39,6 +39,23 @@ export interface Office {
   };
 }
 
+export interface Shift {
+  id: string;
+  companyId: string;
+  name: string;
+  startTime: string;
+  endTime: string;
+  breakStart: string | null;
+  breakEnd: string | null;
+  createdAt: string;
+  updatedAt: string;
+
+  company?: {
+    id: string;
+    name: string;
+  };
+}
+
 export interface CompanyListResponse {
   success: boolean;
   message: string;
@@ -57,6 +74,12 @@ export interface OfficeListResponse {
   data: Office[];
 }
 
+export interface ShiftListResponse {
+  success: boolean;
+  message: string;
+  data: Shift[];
+}
+
 export interface CompanyResponse {
   success: boolean;
   message: string;
@@ -73,6 +96,12 @@ export interface OfficeResponse {
   success: boolean;
   message: string;
   data: Office;
+}
+
+export interface ShiftResponse {
+  success: boolean;
+  message: string;
+  data: Shift;
 }
 
 export interface CompanyPayload {
@@ -95,4 +124,13 @@ export interface OfficePayload {
   latitude?: number;
   longitude?: number;
   allowedRadiusMeters?: number;
+}
+
+export interface ShiftPayload {
+  companyId: string;
+  name: string;
+  startTime: string;
+  endTime: string;
+  breakStart?: string;
+  breakEnd?: string;
 }

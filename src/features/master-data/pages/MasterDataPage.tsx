@@ -7,6 +7,7 @@ import axios from 'axios';
 
 import {
   Building2,
+  Clock3,
   MapPin,
   Pencil,
   Plus,
@@ -18,12 +19,15 @@ import {
   createCompany,
   createDepartment,
   createOffice,
+  createShift,
   getCompanies,
   getDepartments,
   getOffices,
+  getShifts,
   updateCompany,
   updateDepartment,
   updateOffice,
+  updateShift,
 } from '../api/master-data.api';
 
 import CompanyFormModal
@@ -35,6 +39,9 @@ import DepartmentFormModal
 import OfficeFormModal
   from '../components/OfficeFormModal';
 
+import ShiftFormModal
+  from '../components/ShiftFormModal';
+
 import type {
   Company,
   CompanyPayload,
@@ -42,6 +49,8 @@ import type {
   DepartmentPayload,
   Office,
   OfficePayload,
+  Shift,
+  ShiftPayload,
 } from '../types/master-data.types';
 
 import {
@@ -51,7 +60,8 @@ import {
 type Tab =
   | 'companies'
   | 'departments'
-  | 'offices';
+  | 'offices'
+  | 'shifts';
 
 export default function MasterDataPage() {
   const { showToast } =
@@ -72,6 +82,9 @@ export default function MasterDataPage() {
   const [offices, setOffices] =
     useState<Office[]>([]);
 
+  const [shifts, setShifts] =
+    useState<Shift[]>([]);
+
   const [
     selectedCompany,
     setSelectedCompany,
@@ -91,6 +104,11 @@ export default function MasterDataPage() {
     setSelectedOffice,
   ] =
     useState<Office | null>(null);
+
+  const [
+    selectedShift,
+    setSelectedShift,
+  ] = useState<Shift | null>(null);
 
   const [modalOpen, setModalOpen] =
     useState(false);
@@ -120,16 +138,19 @@ export default function MasterDataPage() {
         companyData,
         departmentData,
         officeData,
+        shiftData,
       ] =
         await Promise.all([
           getCompanies(),
           getDepartments(),
           getOffices(),
+          getShifts(),
         ]);
 
       setCompanies(companyData);
       setDepartments(departmentData);
       setOffices(officeData);
+      setShifts(shiftData);
     } catch (error) {
       setError(
         getErrorMessage(
@@ -146,6 +167,7 @@ export default function MasterDataPage() {
     setSelectedCompany(null);
     setSelectedDepartment(null);
     setSelectedOffice(null);
+    setSelectedShift(null);
     setModalOpen(true);
   }
 
@@ -154,6 +176,7 @@ export default function MasterDataPage() {
     setSelectedCompany(null);
     setSelectedDepartment(null);
     setSelectedOffice(null);
+    setSelectedShift(null);
   }
 
   async function saveCompany(
@@ -289,6 +312,50 @@ export default function MasterDataPage() {
     }
   }
 
+  async function saveShift(
+    payload: ShiftPayload,
+  ) {
+    setIsSubmitting(true);
+
+    try {
+      const isEditing =
+        Boolean(selectedShift);
+
+      await (
+        selectedShift
+          ? updateShift(
+              selectedShift.id,
+              payload,
+            )
+          : createShift(payload)
+      );
+
+      closeModal();
+      await loadData();
+
+      showToast({
+        type: 'success',
+        title: isEditing
+          ? 'Shift updated'
+          : 'Shift created',
+        message: isEditing
+          ? 'Shift information was updated successfully.'
+          : 'New shift was created successfully.',
+      });
+    } catch (error) {
+      showToast({
+        type: 'error',
+        title: 'Shift save failed',
+        message: getErrorMessage(
+          error,
+          'Failed to save shift.',
+        ),
+      });
+    } finally {
+      setIsSubmitting(false);
+    }
+  }
+
   return (
     <div className="page-stack">
       <section className="page-heading">
@@ -317,7 +384,9 @@ export default function MasterDataPage() {
             ? 'New Company'
             : tab === 'departments'
               ? 'New Department'
-              : 'New Office'}
+              : tab === 'offices'
+                ? 'New Office'
+                : 'New Shift'}
         </button>
       </section>
 
@@ -354,6 +423,12 @@ export default function MasterDataPage() {
           label="Offices"
           value={offices.length}
         />
+
+        <StatCard
+          icon={<Clock3 size={18} />}
+          label="Shifts"
+          value={shifts.length}
+        />
       </section>
 
       <section className="panel-card">
@@ -385,6 +460,15 @@ export default function MasterDataPage() {
             }
           >
             Offices
+          </TabButton>
+
+          <TabButton
+            active={tab === 'shifts'}
+            onClick={() =>
+              setTab('shifts')
+            }
+          >
+            Shifts
           </TabButton>
 
           <button
@@ -428,12 +512,23 @@ export default function MasterDataPage() {
                 setModalOpen(true);
               }}
             />
-          ) : (
+          ) : tab === 'offices' ? (
             <OfficeTable
               items={offices}
               onEdit={(office) => {
                 setSelectedOffice(
                   office,
+                );
+
+                setModalOpen(true);
+              }}
+            />
+          ) : (
+            <ShiftTable
+              items={shifts}
+              onEdit={(shift) => {
+                setSelectedShift(
+                  shift,
                 );
 
                 setModalOpen(true);
@@ -497,6 +592,24 @@ export default function MasterDataPage() {
             }
             onClose={closeModal}
             onSubmit={saveOffice}
+          />
+        )}
+
+      {modalOpen &&
+        tab === 'shifts' && (
+          <ShiftFormModal
+            key={
+              selectedShift
+                ? selectedShift.id
+                : 'new-shift'
+            }
+            shift={selectedShift}
+            companies={companies}
+            isSubmitting={
+              isSubmitting
+            }
+            onClose={closeModal}
+            onSubmit={saveShift}
           />
         )}
     </div>
@@ -683,6 +796,81 @@ function OfficeTable({
   );
 }
 
+function ShiftTable({
+  items,
+  onEdit,
+}: {
+  items: Shift[];
+  onEdit: (
+    item: Shift,
+  ) => void;
+}) {
+  return (
+    <div className="table-wrap">
+      <table className="data-table">
+        <thead>
+          <tr>
+            <th>Shift</th>
+            <th>Company</th>
+            <th>Start</th>
+            <th>End</th>
+            <th>Break</th>
+            <th>Action</th>
+          </tr>
+        </thead>
+
+        <tbody>
+          {items.map((item) => (
+            <tr key={item.id}>
+              <td>
+                <strong>
+                  {item.name}
+                </strong>
+              </td>
+
+              <td>
+                {item.company?.name ??
+                  '-'}
+              </td>
+
+              <td>
+                {formatShiftTime(
+                  item.startTime,
+                )}
+              </td>
+
+              <td>
+                {formatShiftTime(
+                  item.endTime,
+                )}
+              </td>
+
+              <td>
+                {item.breakStart &&
+                item.breakEnd
+                  ? `${formatShiftTime(
+                      item.breakStart,
+                    )} - ${formatShiftTime(
+                      item.breakEnd,
+                    )}`
+                  : '-'}
+              </td>
+
+              <td>
+                <EditButton
+                  onClick={() =>
+                    onEdit(item)
+                  }
+                />
+              </td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  );
+}
+
 function EditButton({
   onClick,
 }: {
@@ -760,4 +948,25 @@ function getErrorMessage(
   }
 
   return fallback;
+}
+
+function formatShiftTime(
+  value: string,
+) {
+  const date =
+    new Date(value);
+
+  const hours =
+    date
+      .getUTCHours()
+      .toString()
+      .padStart(2, '0');
+
+  const minutes =
+    date
+      .getUTCMinutes()
+      .toString()
+      .padStart(2, '0');
+
+  return `${hours}:${minutes}`;
 }

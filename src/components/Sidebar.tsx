@@ -11,6 +11,7 @@ import {
   Settings,
   ShieldCheck,
   UserRound,
+  CalendarDays,
 } from 'lucide-react';
 
 import type {
@@ -32,6 +33,11 @@ const mainMenu = [
     label: 'Employees',
     path: '/employees',
     icon: UserRound,
+  },
+  {
+  label: 'Schedules',
+  path: '/schedules',
+  icon: CalendarDays,
   },
   {
     label: 'Master Data',

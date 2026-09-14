@@ -19,7 +19,7 @@ import NotificationPage from '../features/notifications/pages/NotificationPage';
 import RbacPage from '../features/rbac/pages/RbacPage';
 import SettingsPage from '../features/settings/pages/SettingsPage';
 import AuditLogPage from '../features/audit-logs/pages/AuditLogPage';
-
+import SchedulePage from '../features/schedules/pages/SchedulePage'; 
 
 
 
@@ -58,7 +58,10 @@ export default function AppRouter() {
               path="/employees"
               element={<EmployeePage />}
             />
-
+            <Route
+              path="/schedules"
+              element={<SchedulePage />}
+            />
             <Route
               path="/master-data"
               element={<MasterDataPage />}
